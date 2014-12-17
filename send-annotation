@@ -1,0 +1,37 @@
+#!/usr/bin/env python
+# coding=utf-8
+
+import sys
+import click
+from influxdb import client as influxdb
+
+
+@click.command()
+@click.option('-h', '--host', 'db_host', default='localhost', help='db host')
+@click.option('-p', '--port', 'db_port', default=8086, help='db port')
+@click.option('-d', '--db', 'db_name', default='metrics', help='db name')
+@click.option('-U', '--user', 'user', default='root', help='username')
+@click.option('-P', '--pass', 'password', default='root', help='password')
+@click.option('-T', '--title', 'title', default='event', help='event title')
+@click.option('-t', '--tag', 'tags', multiple=True, help='event tags')
+@click.option('-D', '--description', 'text', help='event description')
+def cli(db_host, db_port, db_name, user, password, title, tags, text):
+    if text is None:
+        text = "\n".join([line for line in sys.stdin])
+
+    try:
+        db = influxdb.InfluxDBClient(db_host, db_port, user, password, db_name)
+        tags_field = str.join(';', tags)
+        data = [{
+            'name': 'events',
+            'columns': ['tags', 'text', 'title'],
+            'points': [[tags_field, text, title]]
+        }]
+        db.write_points(data)
+    except Exception as e:
+        print e
+        sys.exit(-1)
+
+
+if __name__ == '__main__':
+    cli()
